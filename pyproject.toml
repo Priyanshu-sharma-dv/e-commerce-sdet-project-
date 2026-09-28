@@ -1,0 +1,22 @@
+[tool.ruff]
+line-length = 100
+exclude = [".venv", "reports", "__pycache__"]
+
+[tool.pyright]
+include = ["app", "api_clients", "database", "fixtures", "pages", "tests", "utils"]
+exclude = [".venv", "reports"]
+typeCheckingMode = "basic"
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+markers = [
+  "ui: browser UI tests",
+  "api: REST API tests",
+  "db: database tests",
+  "integration: cross-layer tests",
+  "smoke: critical smoke tests",
+  "regression: regression suite",
+  "security: security checks",
+  "contract: API contract checks",
+  "flaky: tests with known intermittent behavior",
+]

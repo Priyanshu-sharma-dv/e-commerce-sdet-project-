@@ -1,0 +1,31 @@
+name: SDET Test Pipeline
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: ecommerce
+          POSTGRES_USER: ecommerce
+          POSTGRES_PASSWORD: ecommerce
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U ecommerce -d ecommerce"
+          --health-interval=5s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - run: playwright install --with-deps chromium
+      - run: |
+          export DATABASE_URL=postgresql+psycopg://ecommerce:ecommerce@localhost:5432/ecommerce
+          pytest -v --html=reports/report.html --self-contained-html
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-report
+          path: reports/

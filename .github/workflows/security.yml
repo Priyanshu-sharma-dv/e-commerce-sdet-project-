@@ -1,0 +1,25 @@
+name: Security Scan
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 2 * * 1'
+
+jobs:
+  zap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start application
+        run: docker compose up -d db app
+      - name: ZAP baseline scan
+        run: |
+          docker run --network host -t ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t http://127.0.0.1:8000 -r zap-report.html || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-report
+          path: zap-report.html
+      - if: always()
+        run: docker compose down -v

@@ -1,0 +1,57 @@
+name: SDET Quality Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: ecommerce
+          POSTGRES_USER: ecommerce
+          POSTGRES_PASSWORD: ecommerce
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U ecommerce -d ecommerce"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+      - name: Lint
+        run: ruff check .
+      - name: Start application
+        env:
+          DATABASE_URL: postgresql+psycopg://ecommerce:ecommerce@localhost:5432/ecommerce
+        run: |
+          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
+          sleep 5
+      - name: Tests
+        env:
+          BASE_URL: http://127.0.0.1:8000
+          DATABASE_URL: postgresql+psycopg://ecommerce:ecommerce@localhost:5432/ecommerce
+        run: pytest -n 2 --alluredir=allure-results --junitxml=test-results.xml
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-artifacts
+          path: |
+            allure-results/
+            test-results.xml
+            artifacts/
+            logs/
+            app.log

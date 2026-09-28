@@ -1,0 +1,10 @@
+let user=null; let cart=[];
+const $=id=>document.getElementById(id);
+async function api(path, options={}){const r=await fetch(path,{headers:{'Content-Type':'application/json',...(options.headers||{})},...options});const data=await r.json();if(!r.ok)throw new Error(data.detail||'Request failed');return data;}
+async function loadProducts(q=''){const products=await api('/api/products'+(q?'?q='+encodeURIComponent(q):''));$('products').innerHTML=products.map(p=>`<article class="card"><h3>${p.name}</h3><p>${p.category}</p><p class="price">$${Number(p.price).toFixed(2)}</p><p class="stock">${p.stock} in stock</p><button onclick="addToCart(${p.id},'${p.name.replaceAll("'","\\'")}',${p.price})">Add to cart</button></article>`).join('');}
+window.addToCart=(id,name,price)=>{const item=cart.find(x=>x.id===id);if(item)item.quantity++;else cart.push({id,name,price,quantity:1});renderCart();};
+function renderCart(){if(!cart.length){$('cart').textContent='Your cart is empty.';$('checkoutBtn').disabled=true;return;}$('cart').innerHTML=cart.map(x=>`<div class="cart-item"><span>${x.name} × ${x.quantity}</span><strong>$${(x.price*x.quantity).toFixed(2)}</strong></div>`).join('');$('checkoutBtn').disabled=!user;}
+$('loginBtn').onclick=async()=>{try{user=await api('/api/auth/login',{method:'POST',body:JSON.stringify({email:$('email').value,password:$('password').value})});$('userStatus').textContent=user.user.email;$('loginMessage').textContent='Login successful';renderCart();}catch(e){$('loginMessage').textContent=e.message;}};
+$('searchBtn').onclick=()=>loadProducts($('search').value);$('search').onkeydown=e=>{if(e.key==='Enter')loadProducts(e.target.value)};
+$('checkoutBtn').onclick=async()=>{try{const order=await api('/api/orders',{method:'POST',body:JSON.stringify({user_id:user.user.id,items:cart.map(x=>({product_id:x.id,quantity:x.quantity}))})});$('orderMessage').textContent=`Order #${order.id} placed successfully — $${Number(order.total).toFixed(2)}`;cart=[];renderCart();loadProducts();}catch(e){$('orderMessage').textContent=e.message;}};
+loadProducts();

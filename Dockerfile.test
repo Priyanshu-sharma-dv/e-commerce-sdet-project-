@@ -1,0 +1,7 @@
+FROM mcr.microsoft.com/playwright/python:v1.55.0-noble
+WORKDIR /workspace
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+ENV BASE_URL=http://app:8000
+CMD ["pytest", "-v", "-n", "2", "--alluredir=allure-results"]
